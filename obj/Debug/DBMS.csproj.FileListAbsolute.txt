@@ -5,3 +5,9 @@ D:\TEC\Semestre 6\Administracion de Bases de Datos\Programas\Proyecto final\obj\
 D:\TEC\Semestre 6\Administracion de Bases de Datos\Programas\Proyecto final\obj\Debug\DBMS.csproj.CoreCompileInputs.cache
 D:\TEC\Semestre 6\Administracion de Bases de Datos\Programas\Proyecto final\obj\Debug\DBMS.exe
 D:\TEC\Semestre 6\Administracion de Bases de Datos\Programas\Proyecto final\obj\Debug\DBMS.pdb
+C:\Users\Dammy\Documents\GitHub\DBMS\bin\Debug\DBMS.exe.config
+C:\Users\Dammy\Documents\GitHub\DBMS\bin\Debug\DBMS.exe
+C:\Users\Dammy\Documents\GitHub\DBMS\bin\Debug\DBMS.pdb
+C:\Users\Dammy\Documents\GitHub\DBMS\obj\Debug\DBMS.csprojAssemblyReference.cache
+C:\Users\Dammy\Documents\GitHub\DBMS\obj\Debug\DBMS.exe
+C:\Users\Dammy\Documents\GitHub\DBMS\obj\Debug\DBMS.pdb

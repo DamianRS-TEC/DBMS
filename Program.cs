@@ -9,17 +9,17 @@ namespace DBMS
 {
     class Program
     {
-        
         static void Main(string[] args)
         {
-            string ver = "v0.1";
+            string ver = "v0.1.1";
             /* Keywords:
              * Crea base %name
              * Borrar base %name
              * Muestra bases
              * Usa base %name
              * Crear tabla %name
-             *  %name %type %size
+             * %name %type %size
+             * 
              * Borrar tabla %name
              * Borrar campo %name %name
              *  
@@ -27,10 +27,15 @@ namespace DBMS
              *  tbl1.est | structure file
              *  tbl1.dat | data file
              */
-            Regex CB = new Regex(@"\b(crea base)\s\S+;"), BB = new Regex(@"\b(borrar base)\s\S;"), MB = new Regex(@"\b(muestra base)\s\S;"), UB = new Regex(@"\b(usa base)\s\S;"),
-                CT = new Regex(@"crear tabla \w;"), BT = new Regex(@"borrar tabla \w;"), BC = new Regex(@"borrar campo \w;");
+            Regex CB = new Regex(@"\b(crea base)\s\S+;"),
+                    BB = new Regex(@"\b(borrar base)\s\S+;"),
+                    MB = new Regex(@"\b(muestra base)\s\S+;"),
+                    UB = new Regex(@"\b(usa base)\s\S+;"),
+                    CT = new Regex(@"\b(crear tabla)\s\S+;"),
+                    BT = new Regex(@"\b(borrar tabla)\s\S+;"),
+                    BC = new Regex(@"\b(borrar campo)\s\S+;");
+
             string UsrInput;
-            
 
             Info();
             Lectura();
@@ -40,20 +45,26 @@ namespace DBMS
                 Console.WriteLine("DBMS " + ver);
                 Console.WriteLine("Proyecto final de administracion de bases de datos");
                 Console.WriteLine("Creado por Robledo Sanchez Damian 19211719");
-                Console.Write(">");
+                Console.Write("> ");
+            }
+            string Extraccion(string ex, int loc)
+            {
+                string[] exA = ex.Split(' ');
+                return exA[loc].Trim(';');
             }
             void Lectura()
             {
                 UsrInput = Console.ReadLine();
                 if (CB.IsMatch(UsrInput))
                 {
-                    CreaBase();
-                    Console.ReadLine();
+                    CreaBase(UsrInput);
+                    Console.ReadKey();
                 }
             }
-            void CreaBase()
+            void CreaBase(string BD)
             {
-
+                string NomBD = Extraccion(BD, 2);
+                
             }
         }
     }
