@@ -2,12 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.IO;
 
 namespace DBMS
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             string ver = "v0.1.3";
             /* Keywords:
@@ -86,7 +87,7 @@ namespace DBMS
                 else if (CT.IsMatch(UsrInput)) //Crear tabla
                     CrearTabla(UsrInput);
             }
-            string Extraccion(string str, int loc)
+            string Extraccion(string str, int loc) //Funcion para extraer una palabra de una cadena
             {
                 string[] Ext = str.Split(' ');
                 return Ext[loc].Trim(';');
@@ -102,12 +103,12 @@ namespace DBMS
                     "usa base * - Asigna la base de datos a trabajar\n" +
                     "crea tabla * - Inicia el proceso de creacion de una tabla en la base de datos en uso");
             }
-            void Clear()
+            void Clear() //Limpia la consola
             {
                 Console.Clear();
                 Info();
             }
-            void CreaBase(string BD)
+            void CreaBase(string BD) //Funcion para crear la carpeta que actua como base de datos
             {
                 string NomBD = Extraccion(BD, 2);
                 if (!System.IO.Directory.Exists(@"../BDs/" + NomBD))
@@ -118,7 +119,7 @@ namespace DBMS
                 else
                     Console.Write("Error! Base de datos ya existe");
             }
-            void BorrarBase(string BD)
+            void BorrarBase(string BD) //Funcion para eliminar una carpeta base de datos
             {
                 string NomBD = Extraccion(BD, 2);
                 if (System.IO.Directory.Exists(@"../BDs/" + NomBD))
@@ -129,7 +130,7 @@ namespace DBMS
                 else
                     Console.Write("Error! Base de datos no existe");
             }
-            void MuestraBase(string BD)
+            void MuestraBase(string BD) //Funcion para mostrar todas las bases de datos
             {
                 if (System.IO.Directory.Exists(@"../BDs/"))
                 {
@@ -142,7 +143,7 @@ namespace DBMS
                 else
                     Console.WriteLine("No existen bases de datos");
             }
-            void UsarBase(string BD)
+            void UsarBase(string BD) //Funcion para asignar una base de datos a trabajar
             {
                 string NomBD = Extraccion(BD, 2);
                 if (System.IO.Directory.Exists(@"../BDs/" + NomBD))
@@ -152,11 +153,11 @@ namespace DBMS
                 else
                     Console.WriteLine("No existe la base de datos");
             }
-            void CrearTabla(string TB)
+            void CrearTabla(string TB) //Funcion para crear una tabla, primero se tiene que seleccionar una base de datos
             {
                 List<string> Campos = new List<string>();
                 string Reciente;
-                bool Exit = false;
+                bool Exit = false, GoodInput = false;
                 if (!System.IO.File.Exists(@"../BDs/" + BDUsing + "/" + Extraccion(TB,2) + ".est"))
                 {
                     if (BDUsing != null)
@@ -171,7 +172,10 @@ namespace DBMS
                             {
                                 Campos.Add(Reciente);
                                 if (Reciente.Contains(";"))
+                                {
                                     Exit = true;
+                                    GoodInput = true;
+                                }
                             }
                             else
                             {
@@ -180,7 +184,13 @@ namespace DBMS
                             }
                         }
                         while (!Exit);
-
+                        if (GoodInput)
+                        {
+                            System.IO.File.Create(@"../BDs/" + BDUsing + "/" + TB + ".dat");
+                            System.IO.File.Create(@"../BDs/" + BDUsing + "/" + TB + ".est");
+                            File.AppendAllLines(@"../BDs/" + BDUsing + "/" + TB + ".dat", Campos);
+ 
+                        }
                     }
                     else
                         Console.WriteLine("No esta usando una base de datos");
@@ -191,7 +201,3 @@ namespace DBMS
         }
     }
 }
-/*
- System.IO.File.Create(@"../BDs/" + NomBD + "/" + NomBD + ".dat");
- System.IO.File.Create(@"../BDs/" + NomBD + "/" + NomBD + ".est");
-*/
