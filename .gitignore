@@ -5,3 +5,8 @@
 /.vs/DBMS/v16/Server/sqlite3
 /bin
 /obj
+bin/Debug/DBMS.exe
+bin/Debug/DBMS.pdb
+obj/Debug/DBMS.csprojAssemblyReference.cache
+obj/Debug/DBMS.exe
+obj/Debug/DBMS.pdb
