@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.IO;
+using System.Linq;
 
 namespace DBMS
 {
@@ -10,7 +11,7 @@ namespace DBMS
     {
         static void Main()
         {
-            string ver = "v0.1.3";
+            string ver = "v0.1.4";
             /* Keywords:
              * Crea base %name
              * Borrar base %name
@@ -33,7 +34,7 @@ namespace DBMS
              *  tbl1.dat | data file
              */
             Regex   //Palabras clave de comandos
-                    H = new Regex(@"help;"),
+                    HE = new Regex(@"help;"),
                     EX = new Regex(@"exit;"),
                     CL = new Regex(@"clear;"),
                     CB = new Regex(@"\b(crea base)\s\S+;"),
@@ -41,14 +42,15 @@ namespace DBMS
                     MB = new Regex(@"\b(muestra bases);"),
                     UB = new Regex(@"\b(usa base)\s\S+;"),
                     CT = new Regex(@"\b(crea tabla)\s\S+"),
+                    MT = new Regex(@"\b(muestra tablas);"),
                     BT = new Regex(@"\b(borrar tabla)\s\S+;"),
                     BC = new Regex(@"\b(borrar campo)\s\S+;");
 
             Regex   //Tipos de datos
                     INT = new Regex(@"\b(\S+,)\s(entero,)\s\d(\d)?(\z|;)"),
                     CAR = new Regex(@"\b(\S+,)\s(caracter,)\s\d(\d)?(\z|;)"),
-                    DEC = new Regex(@"\b(\S+,)\s(decimal,)\s\d(\d)?(\z|;)"),
-                    FEC = new Regex(@"\b(\S+,)\s(fecha,)(\z|;)");
+                    DEC = new Regex(@"\b(\S+,)\s(decimal,)\s(\d(\d)?,\s\d(\d)?)(\z|;)"),
+                    FEC = new Regex(@"\b(\S+,)\s(fecha)(\z|;)");
 
 
             string UsrInput, BDUsing = null;
@@ -70,7 +72,7 @@ namespace DBMS
             void Lectura() //Deteccion de la entrada del usuario
             {
                 UsrInput = Console.ReadLine();
-                if (H.IsMatch(UsrInput))       //Mostrar los comandos
+                if (HE.IsMatch(UsrInput))      //Mostrar los comandos
                     Help();
                 else if (CL.IsMatch(UsrInput)) //Limpiar consola
                     Clear();
@@ -86,6 +88,8 @@ namespace DBMS
                     UsarBase(UsrInput);
                 else if (CT.IsMatch(UsrInput)) //Crear tabla
                     CrearTabla(UsrInput);
+                else if (MT.IsMatch(UsrInput)) //Muestra tablas
+                    MuestraTabla(UsrInput);
             }
             string Extraccion(string str, int loc) //Funcion para extraer una palabra de una cadena
             {
@@ -101,7 +105,8 @@ namespace DBMS
                     "borrar base * - Borra la base de datos con el nombre asignado, si existe\n" +
                     "muestra bases - Lista todas las bases de datos existentes\n" +
                     "usa base * - Asigna la base de datos a trabajar\n" +
-                    "crea tabla * - Inicia el proceso de creacion de una tabla en la base de datos en uso");
+                    "crea tabla * - Inicia el proceso de creacion de una tabla en la base de datos en uso\n"+
+                    "muestra tablas - Muestra las tablas de la base de datos seleccionada");
             }
             void Clear() //Limpia la consola
             {
@@ -156,9 +161,12 @@ namespace DBMS
             void CrearTabla(string TB) //Funcion para crear una tabla, primero se tiene que seleccionar una base de datos
             {
                 List<string> Campos = new List<string>();
-                string Reciente;
+                string Reciente, NombreDeTabla = Extraccion(TB,2);
+                string DAT = @"../BDs/" + BDUsing + "/" + NombreDeTabla + ".dat",
+                       EST = @"../BDs/" + BDUsing + "/" + NombreDeTabla + ".est";
+                
                 bool Exit = false, GoodInput = false;
-                if (!System.IO.File.Exists(@"../BDs/" + BDUsing + "/" + Extraccion(TB,2) + ".est"))
+                if (!File.Exists(@"../BDs/" + BDUsing + "/" + NombreDeTabla + ".est"))
                 {
                     if (BDUsing != null)
                     {
@@ -170,12 +178,14 @@ namespace DBMS
                                 DEC.IsMatch(Reciente) |
                                 FEC.IsMatch(Reciente))
                             {
-                                Campos.Add(Reciente);
+                                
                                 if (Reciente.Contains(";"))
                                 {
                                     Exit = true;
                                     GoodInput = true;
+                                    Reciente = Reciente.Replace(";","");
                                 }
+                                Campos.Add(Reciente);
                             }
                             else
                             {
@@ -186,9 +196,9 @@ namespace DBMS
                         while (!Exit);
                         if (GoodInput)
                         {
-                            System.IO.File.Create(@"../BDs/" + BDUsing + "/" + TB + ".dat");
-                            System.IO.File.Create(@"../BDs/" + BDUsing + "/" + TB + ".est");
-                            File.AppendAllLines(@"../BDs/" + BDUsing + "/" + TB + ".dat", Campos);
+                            File.Create(DAT).Close();
+                            File.Create(EST).Close();
+                            File.AppendAllLines(EST, Campos);
  
                         }
                     }
@@ -197,6 +207,25 @@ namespace DBMS
                 }
                 else
                     Console.WriteLine("La tabla con ese nombre ya existe");
+            }
+            void MuestraTabla(string TB)
+            {
+                DirectoryInfo DI = new DirectoryInfo(@"../BDs/" + BDUsing + "/");
+                if (DI.GetFiles("*.*").Any())
+                {
+                    FileInfo[] FI = DI.GetFiles("*.est");
+                    foreach (FileInfo F in FI)
+                    {
+                        Console.WriteLine(F.Name);
+                        string[] Campos = File.ReadAllLines(F.FullName);
+                        foreach (string C in Campos)                        
+                            Console.WriteLine("\t" + C);
+                        Console.WriteLine();
+                        
+                    }
+                }
+                else
+                    Console.WriteLine("La base de datos " + BDUsing + " no tiene tablas");
             }
         }
     }
