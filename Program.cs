@@ -11,7 +11,7 @@ namespace DBMS
     {
         static void Main()
         {
-            string ver = "v0.1.4";
+            string ver = "v0.1.5";
             /* Keywords:
              * Crea base %name
              * Borrar base %name
@@ -45,7 +45,10 @@ namespace DBMS
                     MT = new Regex(@"\b(muestra tablas);"),
                     IE = new Regex(@"\b(inserta en)\s\S+"),
                     BT = new Regex(@"\b(borra tabla)\s\S+;"),
-                    BC = new Regex(@"\b(borra campo)\s\S+\s\S+;");
+                    BC = new Regex(@"\b(borra campo)\s\S+\s\S+;"),
+                    IC = new Regex(@"\b(inserta campos)\s\S+"),
+                    EC = new Regex(@"\b(elimina en)\s\S+\s(donde)\s\S+\s(=)\s\S+;"),
+                    MC = new Regex(@"\b(modifica en)\s\S+\s(donde)\s\S+\s(=)\s\S+");
 
             Regex   //Tipos de datos
                     INT = new Regex(@"\b(\S+,)\s(entero,)\s\d(\d)*(\z|;)"),
@@ -85,22 +88,23 @@ namespace DBMS
                 else if (BB.IsMatch(UsrInput)) //Borrar base
                     BorrarBase(UsrInput);
                 else if (MB.IsMatch(UsrInput)) //Mostrar bases
-                    MuestraBase(UsrInput);
+                    MuestraBase();
                 else if (UB.IsMatch(UsrInput)) //Usa base
                     UsarBase(UsrInput);
                 else if (CT.IsMatch(UsrInput)) //Crear tabla
                     CrearTabla(UsrInput);
                 else if (MT.IsMatch(UsrInput)) //Muestra tablas
-                    MuestraTabla(UsrInput);
+                    MuestraTabla();
                 else if (BC.IsMatch(UsrInput)) //Borrar campo de una tabla
                     BorrarCampo(UsrInput);
                 else if (IE.IsMatch(UsrInput)) //Insertar campo 
                     InsertarDato(UsrInput);
-            }
-            string Extraccion(string str, int loc) //Funcion para extraer una palabra de una cadena
-            {
-                string[] Ext = str.Split(' ');
-                return Ext[loc].Trim(';');
+                else if (IC.IsMatch(UsrInput)) //Inserta campos
+                    InsertarCampo(UsrInput);
+                else if (EC.IsMatch(UsrInput)) //Elimina campo donde
+                    EliminarCampoDonde(UsrInput);
+                else if (MC.IsMatch(UsrInput)) //Modifica datos donde el campo sea igual
+                    ModificaCampoDonde(UsrInput);
             }
             void Help() //Despliegue de comandos para usarse
             {
@@ -115,7 +119,14 @@ namespace DBMS
                     "muestra tablas - Muestra las tablas de la base de datos seleccionada\n" +
                     "borra tabla * - Borra la tabla asignada de la base de datos en uso\n" +
                     "borra campo * ** - Borra el campo * de la tabla ** en la base de datos en uso\n" +
-                    "inserta en * - Inicia el proceso de insertar campos en la tabla *\n");
+                    "inserta en * - Inicia el proceso de insertar datos en la tabla *\n" +
+                    "inserta campos * - Inicia el proceso de insertar campos en la tabla\n" +
+                    "elimina en * donde ** - Elimina las entradas en la tabla * donde ** se cumpla\n");
+            }
+            string Extraccion(string str, int loc) //Funcion para extraer una palabra de una cadena
+            {
+                string[] Ext = str.Split(' ');
+                return Ext[loc].Trim(';');
             }
             void Clear() //Limpia la consola
             {
@@ -144,7 +155,7 @@ namespace DBMS
                 else
                     Console.Write("Error! Base de datos no existe");
             }
-            void MuestraBase(string BD) //Funcion para mostrar todas las bases de datos
+            void MuestraBase() //Funcion para mostrar todas las bases de datos
             {
                 if (System.IO.Directory.Exists(@"../BDs/"))
                 {
@@ -211,7 +222,7 @@ namespace DBMS
                 else
                     Console.WriteLine("No esta usando una base de datos");
             }
-            void MuestraTabla(string TB)
+            void MuestraTabla()
             {
                 DirectoryInfo DI = new DirectoryInfo(@"../BDs/" + BDUsing + "/");
                 if (DI.GetFiles("*.*").Any())
@@ -231,29 +242,89 @@ namespace DBMS
             }
             void BorrarCampo(string UsrI) //Fucnion para borrar campo, requiere de una base de datos en uso, el campo y la tabla
             {
-                string C = Extraccion(UsrI, 2), TB = Extraccion(UsrI, 3);
+                string C = Extraccion(UsrI, 2), TB = Extraccion(UsrI, 3),
+                    PATHDAT = "../BDs/" + BDUsing + "/" + TB + ".dat",
+                    PATHEST = "../BDs/" + BDUsing + "/" + TB + ".est";
                 if (BDUsing != null)
                 {
-                    if (File.Exists(@"../BDs/" + BDUsing + "/" + TB + ".est"))
+                    if (File.Exists(@PATHEST))
                     {
-                        string[] Arr = File.ReadAllLines(@"../BDs/" + BDUsing + "/" + TB + ".est").ToArray();
-                        int Pos = 0, PosDat = 0, AllDat = 0;
+                        string Mem = "";
+                        string[] Arr = File.ReadAllLines(@PATHEST).ToArray();
+                        int Pos = 0, AllDat, TamDat, Salto = 0, Entradas = 0;
                         bool Found = false;
                         Regex TestString = new Regex(@C);
-                        foreach (string S in Arr)
+                        do
                         {
-                            if (TestString.IsMatch(S))
+                            if (TestString.IsMatch(Arr[Pos]))
                                 Found = true;
                             else
                                 Pos++;
-
                         }
+                        while (!Found);
                         if (Found)
                         {
                             AllDat = ContarDato(Arr);
-                            PosDat = ContarCampo(Arr[Pos]);
-                            //AQUI ME QUEDE
+                            TamDat = ContarCampo(Arr[Pos]);
+                            for (int i = 0; i < Pos; i++)
+                                Salto += ContarCampo(Arr[i]);
 
+
+                            using (FileStream Dat = new FileStream(@PATHDAT, FileMode.Open))
+                            {
+                                using (StreamReader SR = new StreamReader(Dat))
+                                {
+                                    string L = SR.ReadToEnd();
+                                    Entradas = L.Length / AllDat;
+                                }
+                            }
+
+                            using (FileStream Dat = new FileStream(@PATHDAT, FileMode.Open))
+                            using (StreamReader SR = new StreamReader(Dat))
+                            {
+                                for (int i = 0; i < Entradas; i++)
+                                {
+                                    char Buffer;
+                                    if (Salto == 0)
+                                    {
+                                        for (int m = 0; m < TamDat; m++)
+                                            SR.Read();
+                                        for (int m = TamDat; m < AllDat; m++)
+                                        {
+                                            Buffer = (char)SR.Read();
+                                            Mem += Buffer.ToString();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        for (int m = 0; m < Salto; m++)
+                                        {
+                                            Buffer = (char)SR.Read();
+                                            Mem += Buffer.ToString();
+                                        }
+                                        for (int m = 0; m < TamDat; m++)
+                                            SR.Read();
+                                        for (int m = TamDat + Salto; m < AllDat; m++)
+                                        {
+                                            Buffer = (char)SR.Read();
+                                            Mem += Buffer.ToString();
+                                        }
+                                    }
+                                }
+                            }
+
+                            using (FileStream Dat = new FileStream(@PATHDAT, FileMode.Create))
+                            using (StreamWriter SW = new StreamWriter(Dat))
+                                SW.Write(Mem);
+
+                            List<string> MemEst = File.ReadAllLines(PATHEST).ToList();
+                            MemEst.RemoveAt(Pos);
+                            using (FileStream Dat = new FileStream(PATHEST, FileMode.Create))
+                            using (StreamWriter SW = new StreamWriter(Dat))
+                            {
+                                foreach (string campo in MemEst)
+                                    SW.WriteLine(campo);
+                            }
                             Console.WriteLine("Campo eliminado");
                         }
                         else
@@ -263,59 +334,34 @@ namespace DBMS
                 else
                     Console.WriteLine("No esta usando una base de datos");
             }
-            int ContarDato(string[] ArrayOfData)
-            {
-                int Count = 0;
-                foreach (string C in ArrayOfData)
-                {
-                    if (C.Contains("caracter") | C.Contains("entero"))
-                        Count += int.Parse(Extraccion(C, 2));
-                    else if (C.Contains("decimal"))
-                        Count += int.Parse(Extraccion(C, 2).Replace(",", "")) + int.Parse(Extraccion(C, 3));
-                    else
-                        Count += 8;
-                }
-                return Count;
-            }
-            int ContarCampo(string Data)
-            {
-                if (Data.Contains("caracter") | Data.Contains("entero"))
-                    return int.Parse(Extraccion(Data, 2));
-                else if (Data.Contains("decimal"))
-                    return int.Parse(Extraccion(Data, 2).Replace(",", "")) + int.Parse(Extraccion(Data, 3));
-                else
-                    return 8;
-            }
             void InsertarDato(string TB)
             {
                 string[] Campos, CampoReferencia, CampoInsercion;
                 int[] NumReferencia;
                 string Tabla = Extraccion(TB, 2), In;
                 DirectoryInfo DI = new DirectoryInfo(@"../BDs/" + BDUsing + "/");
-                if (DI.GetFiles(Tabla+ ".est").Any())
+                if (DI.GetFiles(Tabla + ".est").Any())
                 {
-                    bool cont = true, Correct = false;
+                    bool cont = true, Correct;
                     int i = 0;
-                    List<string> CInput = new List<string>();
                     FileInfo[] FI = DI.GetFiles(Tabla + ".est");
+                    FileInfo F = FI[0];
                     Campos = File.ReadAllLines(FI[0].FullName);
                     CampoReferencia = new string[Campos.Length];
                     NumReferencia = new int[Campos.Length];
                     CampoInsercion = new string[Campos.Length];
 
-                    foreach (FileInfo F in FI)
+                    Console.WriteLine(F.Name);
+                    foreach (string C in Campos)
                     {
-                        Console.WriteLine(F.Name);
-                        foreach (string C in Campos)
-                        {
-                            Console.WriteLine("\t" + C);
-                            NumReferencia[i] = ContarCampo(C);
-                            CampoReferencia[i] = Extraccion(C, 0).Replace(",", "");
-                            i++;
-                        }
-                        Console.WriteLine();
-
+                        Console.WriteLine("\t" + C);
+                        NumReferencia[i] = ContarCampo(C);
+                        CampoReferencia[i] = Extraccion(C, 0).Replace(",", "");
+                        i++;
                     }
+                    Console.WriteLine();
+
+
                     Console.WriteLine("Inserta los valores con el formato * = ** donde * es el campo y ** es el valor");
                     Regex Entrada = new Regex(@"\b(\S+\s=\s(\S|\d)+)(;)?");
                     do
@@ -329,7 +375,7 @@ namespace DBMS
                             {
                                 if (In.Contains(item))
                                 {
-                                    if (item.Contains("entero")|| item.Contains("fecha"))
+                                    if (item.Contains("entero") || item.Contains("fecha"))
                                     {
                                         if (int.TryParse(Extraccion(In, 2), out int result))
                                         {
@@ -361,20 +407,341 @@ namespace DBMS
 
 
                     FileStream Dat = new FileStream(@"../BDs/" + BDUsing + "/" + Tabla + ".dat", FileMode.Append);
-                    for(int i1 = 0; i1 < CampoReferencia.Length; i1++)
+                    StreamWriter SW = new StreamWriter(Dat);
+                    for (int i1 = 0; i1 < CampoReferencia.Length; i1++)
                     {
                         string input = CampoInsercion[i1];
                         if (input == null)
                             for (int spaces = NumReferencia[i1]; spaces > 0; spaces--)
-                                input = input + " ";
+                                input += " ";
                         else
                             for (int spaces = NumReferencia[i1]; spaces > CampoInsercion[i1].Length; spaces--)
-                                input = input + " ";
+                                input += " ";
+                        SW.Write(input);
                     }
+                    SW.Close();
+                    Dat.Close();
                 }
                 else
                     Console.WriteLine("La base de datos " + BDUsing + " no tiene la tabla " + Tabla);
             }
+            void InsertarCampo(string TB)
+            {
+                List<string> Campos = new List<string>();
+                string Reciente, NombreDeTabla = Extraccion(TB, 2);
+                string DAT = @"../BDs/" + BDUsing + "/" + NombreDeTabla + ".dat",
+                       EST = @"../BDs/" + BDUsing + "/" + NombreDeTabla + ".est";
+                bool Exit = false, GoodInput = false;
+                if (BDUsing != null)
+                    if (File.Exists(@"../BDs/" + BDUsing + "/" + NombreDeTabla + ".est"))
+                    {
+                        do
+                        {
+                            Reciente = Console.ReadLine();
+                            if (INT.IsMatch(Reciente) |
+                                CAR.IsMatch(Reciente) |
+                                DEC.IsMatch(Reciente) |
+                                FEC.IsMatch(Reciente))
+                            {
+
+                                if (Reciente.Contains(";"))
+                                {
+                                    Exit = true;
+                                    GoodInput = true;
+                                    Reciente = Reciente.Replace(";", "");
+                                }
+                                Campos.Add(Reciente);
+                            }
+                            else
+                            {
+                                Console.WriteLine("Error en la entrada de campos");
+                                Exit = true;
+                            }
+                        }
+                        while (!Exit);
+                        if (GoodInput)
+                        {
+                            int AllDat = ContarDato(File.ReadAllLines(EST).ToArray()), Entradas = 0;
+                            string Mem = "";
+                            char Buff;
+                            File.AppendAllLines(EST, Campos);
+                            int AllNewDat = ContarDato(File.ReadAllLines(EST).ToArray());
+                            using (FileStream Dat = new FileStream(DAT, FileMode.Open))
+                            {
+                                using (StreamReader SR = new StreamReader(Dat))
+                                {
+                                    string L = SR.ReadToEnd();
+                                    Entradas = L.Length / AllDat;
+                                }
+                            }
+                            using (FileStream Dat = new FileStream(DAT, FileMode.Open))
+                            using (StreamReader SR = new StreamReader(Dat))
+                            {
+                                for (int e = 0; e < Entradas; e++)
+                                {
+                                    for (int m = 0; m < AllDat; m++)
+                                    {
+                                        Buff = (char)SR.Read();
+                                        Mem += Buff.ToString();
+                                    }
+                                    for (int i = AllDat; i < AllNewDat; i++)
+                                        Mem += " ";
+                                }
+                            }
+                            using (FileStream Dat = new FileStream(DAT, FileMode.Create))
+                            using (StreamWriter SW = new StreamWriter(Dat))
+                                SW.Write(Mem);
+                            Console.WriteLine("Campo(s) insertados");
+                        }
+                    }
+                    else
+                        Console.WriteLine("La tabla " + NombreDeTabla + " no existe");
+                else
+                    Console.WriteLine("No esta usando una base de datos");
+            }
+            void EliminarCampoDonde(string UI)
+            {
+                string Tabla = Extraccion(UI, 2),
+                    Campo = Extraccion(UI, 4),
+                    Valor = Extraccion(UI, 6),
+                    EST = @"../BDs/" + BDUsing + "/" + Tabla + ".est",
+                    DAT = @"../BDs/" + BDUsing + "/" + Tabla + ".dat",
+                    Mem = "",
+                    MemBig = "",
+                    Detector;
+                char Buffer;
+
+
+                if (File.Exists(EST))
+                {
+                    if (File.ReadAllText(EST).Contains(@Campo))
+                    {
+                        int AllDat = ContarDato(File.ReadAllLines(EST)), Entradas, BefDat = 0, Pos = 0;
+                        string[] Arr = File.ReadAllLines(EST).ToArray();
+                        bool Found = false;
+                        Regex TestString = new Regex(@Campo);
+                        do
+                        {
+                            if (TestString.IsMatch(Arr[Pos]))
+                                Found = true;
+                            else
+                                Pos++;
+                        }
+                        while (!Found);
+                        for (int i = 0; i < Pos; i++)
+                            BefDat += ContarCampo(Arr[i]);
+
+                        using (FileStream Dat = new FileStream(DAT, FileMode.Open))
+                        {
+                            using (StreamReader SR = new StreamReader(Dat))
+                            {
+                                string L = SR.ReadToEnd();
+                                Entradas = L.Length / AllDat;
+                            }
+                        }
+
+
+
+                        using (FileStream Dat = new FileStream(DAT, FileMode.Open))
+                        using (StreamReader SR = new StreamReader(Dat))
+                        {
+                            for (int i = 0; i < Entradas; i++)
+                            {
+                                for (int m = 0; m < AllDat; m++)
+                                {
+                                    Buffer = (char)SR.Read();
+                                    Mem += Buffer.ToString();
+                                }
+                                Detector = Mem.Substring(BefDat, ContarCampo(Arr[Pos]));
+                                if (Detector == Valor)
+                                    Mem = "";
+                                MemBig += Mem;
+                                Mem = "";
+                            }
+                        }
+                        using (FileStream Dat = new FileStream(DAT, FileMode.Create))
+                        using (StreamWriter SW = new StreamWriter(Dat))
+                            SW.Write(MemBig);
+                        Console.WriteLine("Accion completada");
+                    }
+                    else
+                        Console.WriteLine("Campo " + Campo + " no existe");
+                }
+                else
+                    Console.WriteLine("La tabla " + Tabla + " no existe");
+            }
+            void ModificaCampoDonde(string UI)
+            {
+                string Tabla = Extraccion(UI, 2),
+                    Campo = Extraccion(UI, 4),
+                    Valor = Extraccion(UI, 6),
+                    EST = @"../BDs/" + BDUsing + "/" + Tabla + ".est",
+                    DAT = @"../BDs/" + BDUsing + "/" + Tabla + ".dat",
+                    Mem = "",
+                    MemBig = "",
+                    Detector,
+                    Reciente;
+                char Buffer;
+                bool Exit, GoodInput = false, cont = true;
+                string[] Campos, CampoReferencia, CampoInsercion;
+                int[] NumReferencia;
+                Campos = File.ReadAllLines(EST);
+                CampoReferencia = new string[Campos.Length];
+                NumReferencia = new int[Campos.Length];
+                CampoInsercion = new string[Campos.Length];
+                int e = 0;
+                foreach (string C in Campos)
+                {
+                    Console.WriteLine("\t" + C);
+                    NumReferencia[e] = ContarCampo(C);
+                    CampoReferencia[e] = Extraccion(C, 0).Replace(",", "");
+                    e++;
+                }
+
+                if (File.Exists(EST) && BDUsing != null)
+                {
+                    if (File.ReadAllText(EST).Contains(@Campo))
+                    {
+                        int AllDat = ContarDato(File.ReadAllLines(EST)), Entradas, BefDat = 0, Pos = 0;
+                        string[] Arr = File.ReadAllLines(EST).ToArray();
+                        int[] DataSpaces = new int[Arr.Length];
+                        int x = 0;
+                        bool Found = false;
+                        foreach (string u in Arr)
+                            DataSpaces[x] = int.Parse(Extraccion(u, 2));
+
+
+                        Regex Entrada = new Regex(@"\b(\S+\s=\s(\S|\d)+)(;)?");
+                        do
+                        {
+                            Reciente = Console.ReadLine();
+                            Exit = false;
+                            for (int i1 = 0; i1 < CampoReferencia.Length; i1++)
+                            {
+                                string item = CampoReferencia[i1];
+                                if (Entrada.Match(Reciente).Success && (Extraccion(Reciente, 2).Length <= NumReferencia[i1]))
+                                {
+                                    if (Reciente.Contains(item))
+                                    {
+                                        if (item.Contains("entero") || item.Contains("fecha"))
+                                        {
+                                            if (int.TryParse(Extraccion(Reciente, 2), out int result))
+                                            {
+                                                CampoInsercion[i1] = result.ToString();
+                                                Exit = true;
+                                            }
+                                        }
+                                        else if (item.Contains("decimal"))
+                                        {
+                                            if (int.TryParse((Extraccion(Reciente, 2) + Extraccion(Reciente, 3)), out int result))
+                                            {
+                                                CampoInsercion[i1] = result.ToString();
+                                                Exit = true;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            CampoInsercion[i1] = Extraccion(Reciente, 2);
+                                            Exit = true;
+                                        }
+                                    }
+                                }
+                            }
+                            if (!Exit)
+                                Console.WriteLine("Formato incorrecto");
+                            else if (Reciente.Contains(";"))
+                                cont = false;
+                        } while (cont);
+
+                        
+
+                        Regex TestString = new Regex(@Campo);
+                        do
+                        {
+                            if (TestString.IsMatch(Arr[Pos]))
+                                Found = true;
+                            else
+                                Pos++;
+                        }
+                        while (!Found);
+                        for (int i = 0; i < Pos; i++)
+                            BefDat += ContarCampo(Arr[i]);
+
+                        using (FileStream Dat = new FileStream(DAT, FileMode.Open))
+                        {
+                            using (StreamReader SR = new StreamReader(Dat))
+                            {
+                                string L = SR.ReadToEnd();
+                                Entradas = L.Length / AllDat;
+                            }
+                        }
+
+
+
+                        using (FileStream Dat = new FileStream(DAT, FileMode.Open))
+                        using (StreamReader SR = new StreamReader(Dat))
+                        {
+                            for (int i = 0; i < Entradas; i++)
+                            {
+                                for (int m = 0; m < AllDat; m++)
+                                {
+                                    Buffer = (char)SR.Read();
+                                    Mem += Buffer.ToString();
+                                }
+                                Detector = Mem.Substring(BefDat, ContarCampo(Arr[Pos]));
+                                if (Detector.Contains(Valor))
+                                {
+                                    Mem = "";
+                                    for (int i1 = 0; i1 < CampoReferencia.Length; i1++)
+                                    {
+                                        Mem += CampoInsercion[i1];
+                                        if (Mem == null)
+                                            for (int spaces = NumReferencia[i1]; spaces > 0; spaces--)
+                                                Mem += " ";
+                                        else
+                                            for (int spaces = NumReferencia[i1]; spaces > CampoInsercion[i1].Length; spaces--)
+                                                Mem += " ";
+                                    }
+                                }
+                                MemBig += Mem;
+                                Mem = "";
+                            }
+                        }
+                        using (FileStream Dat = new FileStream(DAT, FileMode.Create))
+                        using (StreamWriter SW = new StreamWriter(Dat))
+                            SW.Write(MemBig);
+                        Console.WriteLine("Accion completada");
+                    }
+                    else
+                        Console.WriteLine("Campo " + Campo + " no existe");
+                }
+                else
+                    Console.WriteLine("La tabla " + Tabla + " no existe");
+            }
+            int ContarDato(string[] ArrayOfData)
+            {
+                int Count = 0;
+                foreach (string C in ArrayOfData)
+                {
+                    if (C.Contains("caracter") | C.Contains("entero"))
+                        Count += int.Parse(Extraccion(C, 2));
+                    else if (C.Contains("decimal"))
+                        Count += int.Parse(Extraccion(C, 2).Replace(",", "")) + int.Parse(Extraccion(C, 3));
+                    else
+                        Count += 8;
+                }
+                return Count;
+            }
+            int ContarCampo(string Data)
+            {
+                if (Data.Contains("caracter") | Data.Contains("entero"))
+                    return int.Parse(Extraccion(Data, 2));
+                else if (Data.Contains("decimal"))
+                    return int.Parse(Extraccion(Data, 2).Replace(",", "")) + int.Parse(Extraccion(Data, 3));
+                else
+                    return 8;
+            }
+
         }
     }
 }
