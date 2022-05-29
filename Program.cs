@@ -11,28 +11,7 @@ namespace DBMS
     {
         static void Main()
         {
-            string ver = "v0.1.5";
-            /* Keywords:
-             * Crea base %name
-             * Borrar base %name
-             * Muestra bases
-             * Usa base %name
-             * Crear tabla %name
-             * %name %type %size
-             * 
-             * Borrar tabla %name
-             * Borrar campo %name %name
-             * 
-             * Tipos de datos
-             * caracter
-             * int
-             * decimal
-             * fecha
-             *  
-             *  Notes:
-             *  tbl1.est | structure file
-             *  tbl1.dat | data file
-             */
+            string ver = "v0.1.7";
             Regex   //Palabras clave de comandos
                     HE = new Regex(@"help;"),
                     EX = new Regex(@"exit;"),
@@ -48,7 +27,8 @@ namespace DBMS
                     BC = new Regex(@"\b(borra campo)\s\S+\s\S+;"),
                     IC = new Regex(@"\b(inserta campos)\s\S+"),
                     EC = new Regex(@"\b(elimina en)\s\S+\s(donde)\s\S+\s(=)\s\S+;"),
-                    MC = new Regex(@"\b(modifica en)\s\S+\s(donde)\s\S+\s(=)\s\S+");
+                    MC = new Regex(@"\b(modifica en)\s\S+\s(donde)\s\S+\s(=)\s\S+"),
+                    LT = new Regex(@"\b(lista)((\s\S+)+ de\s\S+(\sdonde\s\S+\s=\s\S+)?;)");
 
             Regex   //Tipos de datos
                     INT = new Regex(@"\b(\S+,)\s(entero,)\s\d(\d)*(\z|;)"),
@@ -56,11 +36,8 @@ namespace DBMS
                     DEC = new Regex(@"\b(\S+,)\s(decimal,)\s(\d(\d)*,\s\d(\d)?)(\z|;)"),
                     FEC = new Regex(@"\b(\S+,)\s(fecha)(\z|;)");
 
-
             string UsrInput, BDUsing = null;
             bool Cont = true;
-
-
             Info();
             do
             {
@@ -105,6 +82,10 @@ namespace DBMS
                     EliminarCampoDonde(UsrInput);
                 else if (MC.IsMatch(UsrInput)) //Modifica datos donde el campo sea igual
                     ModificaCampoDonde(UsrInput);
+                else if (BT.IsMatch(UsrInput)) //Elimina una tabla, su .dat y su .est
+                    EliminarTabla(UsrInput);
+                else if (LT.IsMatch(UsrInput))
+                    Mostrar(UsrInput);
             }
             void Help() //Despliegue de comandos para usarse
             {
@@ -121,7 +102,8 @@ namespace DBMS
                     "borra campo * ** - Borra el campo * de la tabla ** en la base de datos en uso\n" +
                     "inserta en * - Inicia el proceso de insertar datos en la tabla *\n" +
                     "inserta campos * - Inicia el proceso de insertar campos en la tabla\n" +
-                    "elimina en * donde ** - Elimina las entradas en la tabla * donde ** se cumpla\n");
+                    "elimina en * donde ** - Elimina las entradas en la tabla * donde ** se cumpla\n" +
+                    "modifica en * donde ** - Modifica las entradas en la tabla * donde ** se cumpla\n");
             }
             string Extraccion(string str, int loc) //Funcion para extraer una palabra de una cadena
             {
@@ -360,8 +342,6 @@ namespace DBMS
                         i++;
                     }
                     Console.WriteLine();
-
-
                     Console.WriteLine("Inserta los valores con el formato * = ** donde * es el campo y ** es el valor");
                     Regex Entrada = new Regex(@"\b(\S+\s=\s(\S|\d)+)(;)?");
                     do
@@ -539,9 +519,6 @@ namespace DBMS
                                 Entradas = L.Length / AllDat;
                             }
                         }
-
-
-
                         using (FileStream Dat = new FileStream(DAT, FileMode.Open))
                         using (StreamReader SR = new StreamReader(Dat))
                         {
@@ -553,7 +530,7 @@ namespace DBMS
                                     Mem += Buffer.ToString();
                                 }
                                 Detector = Mem.Substring(BefDat, ContarCampo(Arr[Pos]));
-                                if (Detector == Valor)
+                                if (Detector.Trim(' ') == Valor)
                                     Mem = "";
                                 MemBig += Mem;
                                 Mem = "";
@@ -582,7 +559,7 @@ namespace DBMS
                     Detector,
                     Reciente;
                 char Buffer;
-                bool Exit, GoodInput = false, cont = true;
+                bool Exit, cont = true;
                 string[] Campos, CampoReferencia, CampoInsercion;
                 int[] NumReferencia;
                 Campos = File.ReadAllLines(EST);
@@ -608,7 +585,12 @@ namespace DBMS
                         int x = 0;
                         bool Found = false;
                         foreach (string u in Arr)
-                            DataSpaces[x] = int.Parse(Extraccion(u, 2));
+                            if (Extraccion(u, 1) == "fecha")
+                                DataSpaces[x] = 8;
+                            else if (Extraccion(u, 1) == "decimal,")
+                                DataSpaces[x] = int.Parse(Extraccion(u, 2).Replace(",", "")) + int.Parse(Extraccion(u, 3));
+                            else
+                                DataSpaces[x] = int.Parse(Extraccion(u, 2));
 
 
                         Regex Entrada = new Regex(@"\b(\S+\s=\s(\S|\d)+)(;)?");
@@ -653,7 +635,7 @@ namespace DBMS
                                 cont = false;
                         } while (cont);
 
-                        
+
 
                         Regex TestString = new Regex(@Campo);
                         do
@@ -675,9 +657,6 @@ namespace DBMS
                                 Entradas = L.Length / AllDat;
                             }
                         }
-
-
-
                         using (FileStream Dat = new FileStream(DAT, FileMode.Open))
                         using (StreamReader SR = new StreamReader(Dat))
                         {
@@ -694,6 +673,8 @@ namespace DBMS
                                     Mem = "";
                                     for (int i1 = 0; i1 < CampoReferencia.Length; i1++)
                                     {
+                                        if (CampoInsercion[i1] == null)
+                                            CampoInsercion[i1] = "";
                                         Mem += CampoInsercion[i1];
                                         if (Mem == null)
                                             for (int spaces = NumReferencia[i1]; spaces > 0; spaces--)
@@ -718,6 +699,151 @@ namespace DBMS
                 else
                     Console.WriteLine("La tabla " + Tabla + " no existe");
             }
+            void EliminarTabla(string TB)
+            {
+                if (BDUsing != null)
+                {
+                    string Tabla = Extraccion(TB, 2),
+                        PosTabla = @"../BDs/" + BDUsing + "/" + Tabla;
+                    if (File.Exists(PosTabla + ".est"))
+                    {
+                        File.Delete(PosTabla + ".est");
+                        File.Delete(PosTabla + ".dat");
+                        Console.WriteLine("La tabla " + Tabla + " ha sido eliminada");
+                    }
+                    else
+                        Console.WriteLine("La tabala " + Tabla + " no existe en la base de datos");
+                }
+                else
+                    Console.WriteLine("No hay base de datos activa");
+            }
+            void Mostrar(string UsrI)
+            {
+                if (BDUsing != null)
+                {
+                    Regex A = new Regex("/*"),
+                          B = new Regex("=");
+                    bool TriggerAll = false, TriggerCond = false, CampoDetectado = false;
+                    string TB = null;
+                    int TBP = UsrI.Split(' ').Length - 5;
+                    if (A.IsMatch(UsrI))
+                        TriggerAll = true;
+                    if (B.IsMatch(UsrI))
+                        TriggerCond = true;
+                    if (TriggerCond)
+                        TB = Extraccion(UsrI, TBP);
+                    else
+                        TB = Extraccion(UsrI, UsrI.Split(' ').Length - 1);
+
+                    string DAT = @"../BDs/" + BDUsing + "/" + TB + ".dat",
+                           EST = @"../BDs/" + BDUsing + "/" + TB + ".est";
+
+                    string[] Estructura = File.ReadAllLines(EST);
+                    int Total = ContarDato(Estructura);
+                    List<string> Datos = new List<string>();
+                    string[] ADatos;
+
+                    using (FileStream Dat = new FileStream(DAT, FileMode.Open))
+                    using (StreamReader SR = new StreamReader(Dat))
+                    {
+                        while (SR.Peek() != -1)
+                        {
+                            Datos.Add(((char)SR.Read()).ToString());
+                        }
+                        ADatos = Datos.ToArray();
+                    }
+                    if (ADatos != null)
+                    {
+                        string[] Arr = File.ReadAllLines(EST).ToArray(), Nombres = new string[Arr.Length];
+                        int[] DataSpaces = new int[Arr.Length];
+                        string Mem = "";
+                        string[] BigMemArr;
+                        List<string> BigMem = new List<string>();
+                        int x = 0, Entradas = Datos.Count / ContarDato(Arr);
+                        foreach (string u in Arr)
+                        {
+                            if (Extraccion(u, 1) == "fecha")
+                                DataSpaces[x] = 8;
+                            else if (Extraccion(u, 1) == "decimal,")
+                                DataSpaces[x] = int.Parse(Extraccion(u, 2).Replace(",", "")) + int.Parse(Extraccion(u, 3));
+                            else
+                                DataSpaces[x] = int.Parse(Extraccion(u, 2));
+                            Nombres[x] = Extraccion(u, 0).Replace(",", "");
+                            x++;
+                        }
+
+                        string[,] Data = new string[Entradas, Nombres.Length];
+                        int CampoPos = 0, EntradaPos = 0, DatoPos = -1;
+                        foreach (string i in ADatos)
+                        {
+                            DatoPos++;
+                            Mem += i;
+                            if (DatoPos == DataSpaces[CampoPos] - 1)
+                            {
+                                Data[EntradaPos, CampoPos] = Mem;
+                                CampoPos++;
+                                Mem = "";
+                                DatoPos = -1;
+                            }
+                            if (CampoPos == DataSpaces.Length)
+                            {
+                                EntradaPos++;
+                                CampoPos = 0;
+                            }
+                        }
+                        if (TriggerCond)
+                        {
+                            string Cond = Extraccion(UsrI, UsrI.Split(' ').Length - 3);
+                            string Val = Extraccion(UsrI, UsrI.Split(' ').Length - 1);
+                            int s = 0, Good = 0;
+                            foreach (string i in Nombres)
+                                if (i == Cond)
+                                    CampoDetectado = true;
+                                else
+                                    if (!CampoDetectado)
+                                    s++;
+                            if (CampoDetectado)
+                            {
+                                for (int f = 0; f < Entradas; f++)
+                                    if (Val == Data[f, s])
+                                            ImprimirDato(Data, Nombres, DataSpaces, f, Entradas);
+
+
+
+
+                            }
+                            else
+                                Console.WriteLine("El campo introducido para la comparacion no existe en la tabla");
+
+                        }
+                    }
+                    else
+                        Console.WriteLine("No hay base de datos activa");
+                }
+            }
+            void ImprimirDato(string[,] Dato, string[] Nombres, int[] Espacios, int Fila, int Entrada)
+            {
+                string[] NombresAjustados = Nombres;
+                for (int i = 0; i < Nombres.Length; i++)                
+                    if (NombresAjustados[i].Length <= Espacios[i]) 
+                        for (int s = NombresAjustados[i].Length; s < Espacios[i]; s++)
+                            NombresAjustados[i] += " ";
+                foreach (string c in NombresAjustados)
+                {
+                    Console.Write(c + "|");
+                }
+                Console.WriteLine();
+                for (int i = 0; i < NombresAjustados.Length; i++)
+                {
+                    if (Dato[Fila, i].Length < Espacios[i])
+                        for (int s = Dato[Fila, i].Length; s < Espacios[i]; s++)
+                            Dato[Fila, i] += " ";
+                    Console.Write(Dato[Fila, i] + "|");
+                }
+
+
+                
+            }
             int ContarDato(string[] ArrayOfData)
             {
                 int Count = 0;
@@ -741,7 +867,6 @@ namespace DBMS
                 else
                     return 8;
             }
-
         }
     }
 }
