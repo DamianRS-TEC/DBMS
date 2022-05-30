@@ -11,7 +11,7 @@ namespace DBMS
     {
         static void Main()
         {
-            string ver = "v1.0.0";
+            string ver = "v1.0.1";
             Regex   //Palabras clave de comandos
                     HE = new Regex(@"help;"),
                     EX = new Regex(@"exit;"),
@@ -103,8 +103,8 @@ namespace DBMS
                     "inserta en * - Inicia el proceso de insertar datos en la tabla *\n" +
                     "inserta campos * - Inicia el proceso de insertar campos en la tabla\n" +
                     "elimina en * donde ** - Elimina las entradas en la tabla * donde ** se cumpla\n" +
-                    "modifica en * donde ** - Modifica las entradas en la tabla * donde ** se cumpla\n"+
-                    "lista * de ** (donde *** = ****) - Muestra el contenido de una tabla donde\n"+
+                    "modifica en * donde ** - Modifica las entradas en la tabla * donde ** se cumpla\n" +
+                    "lista * de ** (donde *** = ****) - Muestra el contenido de una tabla donde\n" +
                     "\t* - campos separados por coma o el simbolo *, ** - tabla, *** - campo, **** - valor");
             }
             string Extraccion(string str, int loc) //Funcion para extraer una palabra de una cadena
@@ -564,21 +564,22 @@ namespace DBMS
                 bool Exit, cont = true;
                 string[] Campos, CampoReferencia, CampoInsercion;
                 int[] NumReferencia;
-                Campos = File.ReadAllLines(EST);
-                CampoReferencia = new string[Campos.Length];
-                NumReferencia = new int[Campos.Length];
-                CampoInsercion = new string[Campos.Length];
-                int e = 0;
-                foreach (string C in Campos)
-                {
-                    Console.WriteLine("\t" + C);
-                    NumReferencia[e] = ContarCampo(C);
-                    CampoReferencia[e] = Extraccion(C, 0).Replace(",", "");
-                    e++;
-                }
-
                 if (File.Exists(EST) && BDUsing != null)
                 {
+                    Campos = File.ReadAllLines(EST);
+                    CampoReferencia = new string[Campos.Length];
+                    NumReferencia = new int[Campos.Length];
+                    CampoInsercion = new string[Campos.Length];
+                    int e = 0;
+                    foreach (string C in Campos)
+                    {
+                        Console.WriteLine("\t" + C);
+                        NumReferencia[e] = ContarCampo(C);
+                        CampoReferencia[e] = Extraccion(C, 0).Replace(",", "");
+                        e++;
+                    }
+
+
                     if (File.ReadAllText(EST).Contains(@Campo))
                     {
                         int AllDat = ContarDato(File.ReadAllLines(EST)), Entradas, BefDat = 0, Pos = 0;
@@ -740,108 +741,113 @@ namespace DBMS
 
                     string DAT = @"../BDs/" + BDUsing + "/" + TB + ".dat",
                            EST = @"../BDs/" + BDUsing + "/" + TB + ".est";
-
-                    string[] Estructura = File.ReadAllLines(EST);
-                    int Total = ContarDato(Estructura);
-                    List<string> Datos = new List<string>(), NombresUsr = new List<string>();
-                    string[] ADatos;
-
-                    using (FileStream Dat = new FileStream(DAT, FileMode.Open))
-                    using (StreamReader SR = new StreamReader(Dat))
+                    if (File.Exists(EST))
                     {
-                        while (SR.Peek() != -1)
-                        {
-                            Datos.Add(((char)SR.Read()).ToString());
-                        }
-                        ADatos = Datos.ToArray();
-                    }
-                    if (ADatos != null)
-                    {
-                        string[] Arr = File.ReadAllLines(EST).ToArray(), Nombres = new string[Arr.Length], Tipo = new string[Arr.Length];
-                        int[] DataSpaces = new int[Arr.Length];
-                        string Mem = "";
-                        List<string> BigMem = new List<string>();
-                        int x = 0, Entradas = Datos.Count / ContarDato(Arr);
-                        foreach (string u in Arr)
-                        {
-                            if (Extraccion(u, 1) == "fecha")
-                            {
-                                DataSpaces[x] = 8;
-                                Tipo[x] = "fecha";
-                            }
-                            else if (Extraccion(u, 1) == "decimal,")
-                            {
-                                DataSpaces[x] = int.Parse(Extraccion(u, 2).Replace(",", "")) + int.Parse(Extraccion(u, 3));
-                                Tipo[x] = "decimal " + Extraccion(u, 3);
-                            }
-                            else
-                            {
-                                DataSpaces[x] = int.Parse(Extraccion(u, 2));
-                                Tipo[x] = "string";
-                            }
+                        string[] Estructura = File.ReadAllLines(EST);
+                        int Total = ContarDato(Estructura);
+                        List<string> Datos = new List<string>(), NombresUsr = new List<string>();
+                        string[] ADatos;
 
-                            Nombres[x] = Extraccion(u, 0).Replace(",", "");
-                            x++;
-                        }
-                        if (!TriggerAll)
+                        using (FileStream Dat = new FileStream(DAT, FileMode.Open))
+                        using (StreamReader SR = new StreamReader(Dat))
                         {
-                            bool cont = true;
-                            foreach (string i in UsrI.Replace(",", "").Split(' '))
+                            while (SR.Peek() != -1)
                             {
-                                if (Nombres.Contains(i) && cont)
-                                    NombresUsr.Add(i);
-                                if (i == "de")
-                                    cont = false;
+                                Datos.Add(((char)SR.Read()).ToString());
                             }
+                            ADatos = Datos.ToArray();
                         }
-                        string[,] Data = new string[Entradas, Nombres.Length];
-                        int CampoPos = 0, EntradaPos = 0, DatoPos = -1;
-                        foreach (string i in ADatos)
+                        if (ADatos != null)
                         {
-                            DatoPos++;
-                            Mem += i;
-                            if (DatoPos == DataSpaces[CampoPos] - 1)
+                            string[] Arr = File.ReadAllLines(EST).ToArray(), Nombres = new string[Arr.Length], Tipo = new string[Arr.Length];
+                            int[] DataSpaces = new int[Arr.Length];
+                            string Mem = "";
+                            List<string> BigMem = new List<string>();
+                            int x = 0, Entradas = Datos.Count / ContarDato(Arr);
+                            foreach (string u in Arr)
                             {
-                                Data[EntradaPos, CampoPos] = Mem;
-                                CampoPos++;
-                                Mem = "";
-                                DatoPos = -1;
-                            }
-                            if (CampoPos == DataSpaces.Length)
-                            {
-                                EntradaPos++;
-                                CampoPos = 0;
-                            }
-                        }
-                        if (TriggerCond)
-                        {
-                            string Cond = Extraccion(UsrI, UsrI.Split(' ').Length - 3);
-                            string Val = Extraccion(UsrI, UsrI.Split(' ').Length - 1);
-                            int s = 0;
-                            foreach (string i in Nombres)
-                                if (i == Cond)
-                                    CampoDetectado = true;
+                                if (Extraccion(u, 1) == "fecha")
+                                {
+                                    DataSpaces[x] = 8;
+                                    Tipo[x] = "fecha";
+                                }
+                                else if (Extraccion(u, 1) == "decimal,")
+                                {
+                                    DataSpaces[x] = int.Parse(Extraccion(u, 2).Replace(",", "")) + int.Parse(Extraccion(u, 3));
+                                    Tipo[x] = "decimal " + Extraccion(u, 3);
+                                }
                                 else
-                                    if (!CampoDetectado)
-                                    s++;
-                            if (CampoDetectado && TriggerAll)
-                                ImprimirDato(Data, Nombres, DataSpaces, Entradas, Nombres, Val, Cond, Tipo);
-                            else if (CampoDetectado)
-                                ImprimirDato(Data, NombresUsr.ToArray(), DataSpaces, Entradas, Nombres, Val, Cond, Tipo);
-                            else
-                                Console.WriteLine("El campo introducido para la comparacion no existe en la tabla");
+                                {
+                                    DataSpaces[x] = int.Parse(Extraccion(u, 2));
+                                    Tipo[x] = "string";
+                                }
 
+                                Nombres[x] = Extraccion(u, 0).Replace(",", "");
+                                x++;
+                            }
+                            if (!TriggerAll)
+                            {
+                                bool cont = true;
+                                foreach (string i in UsrI.Replace(",", "").Split(' '))
+                                {
+                                    if (Nombres.Contains(i) && cont)
+                                        NombresUsr.Add(i);
+                                    if (i == "de")
+                                        cont = false;
+                                }
+                            }
+                            string[,] Data = new string[Entradas, Nombres.Length];
+                            int CampoPos = 0, EntradaPos = 0, DatoPos = -1;
+                            foreach (string i in ADatos)
+                            {
+                                DatoPos++;
+                                Mem += i;
+                                if (DatoPos == DataSpaces[CampoPos] - 1)
+                                {
+                                    Data[EntradaPos, CampoPos] = Mem;
+                                    CampoPos++;
+                                    Mem = "";
+                                    DatoPos = -1;
+                                }
+                                if (CampoPos == DataSpaces.Length)
+                                {
+                                    EntradaPos++;
+                                    CampoPos = 0;
+                                }
+                            }
+                            if (TriggerCond)
+                            {
+                                string Cond = Extraccion(UsrI, UsrI.Split(' ').Length - 3);
+                                string Val = Extraccion(UsrI, UsrI.Split(' ').Length - 1);
+                                int s = 0;
+                                foreach (string i in Nombres)
+                                    if (i == Cond)
+                                        CampoDetectado = true;
+                                    else
+                                        if (!CampoDetectado)
+                                        s++;
+                                if (CampoDetectado && TriggerAll)
+                                    ImprimirDato(Data, Nombres, DataSpaces, Entradas, Nombres, Val, Cond, Tipo);
+                                else if (CampoDetectado)
+                                    ImprimirDato(Data, NombresUsr.ToArray(), DataSpaces, Entradas, Nombres, Val, Cond, Tipo);
+                                else
+                                    Console.WriteLine("El campo introducido para la comparacion no existe en la tabla");
+
+                            }
+                            else
+                                if (TriggerAll)
+                                ImprimirDato(Data, Nombres, DataSpaces, Entradas, Nombres, null, null, Tipo);
+                            else
+                                ImprimirDato(Data, NombresUsr.ToArray(), DataSpaces, Entradas, Nombres, null, null, Tipo);
                         }
-                        else
-                            if (TriggerAll)
-                            ImprimirDato(Data, Nombres, DataSpaces, Entradas, Nombres, null, null, Tipo);
-                        else
-                            ImprimirDato(Data, NombresUsr.ToArray(), DataSpaces, Entradas, Nombres, null, null, Tipo);
+
                     }
-                    else
-                        Console.WriteLine("No hay base de datos activa");
+                    else Console.WriteLine("La tabla especificada no existe");
                 }
+                else
+                    Console.WriteLine("No hay base de datos activa");
             }
+
             void ImprimirDato(string[,] Dato, string[] Nombres, int[] Espacios, int Entradas, string[] Est, string Val, string Cam, string[] Tipo)
             {
                 string[] NombresAjustados = new string[Nombres.Length];
